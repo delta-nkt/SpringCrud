@@ -1,0 +1,70 @@
+A. ERROR DESCRIPTION:
+
+    1. createErrorResponse (Single Error)
+        Scenario: When you need to return a single, specific error in response to a simple failure.
+        Use Cases:
+        A controller detects a single invalid input (e.g., missing required field).
+        A service layer throws an exception for a specific condition (e.g., user not found).
+        code : "if (user == null) {
+            return ErrorResponseUtil.createErrorResponse(
+                HttpStatus.NOT_FOUND,
+                "USER_NOT_FOUND",
+                "User with ID " + userId + " not found",
+                null
+            );
+        }"
+    2. createErrorResponse (Multiple Errors)
+        Scenario: When multiple errors need to be reported simultaneously, such as during validation or batch processing.
+        Use Cases:
+        Handling MethodArgumentNotValidException for multiple field validation errors.
+        Processing a batch request where several items fail with different errors.
+        code: "
+                List<ErrorResponseUtil.ErrorDetail> errors = new ArrayList<>();
+                errors.add(new ErrorResponseUtil.ErrorDetail("INVALID_NAME", "Name is required", "name"));
+                errors.add(new ErrorResponseUtil.ErrorDetail("INVALID_AGE", "Age must be positive", "age"));
+                return ErrorResponseUtil.createErrorResponse(HttpStatus.BAD_REQUEST, errors);
+            "
+    3. createCustomErrorResponse
+        Scenario: When a developer needs to define a custom error with specific details and log the error for debugging or auditing.
+        Use Cases:
+        Application-specific errors not covered by standard exceptions (e.g., business rule violations).
+        Errors requiring additional context in logs (e.g., user ID, request ID) for traceability.
+        code : "
+            if (!isValidBusinessRule(data)) {
+            return ErrorResponseUtil.createCustomErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "BUSINESS_RULE_VIOLATION",
+                "Invalid business rule for data: " + data,
+                "data",
+                logger,
+                Map.of("requestId", requestId, "userId", userId)
+            );
+        }
+        "
+
+    4. GlobalExceptionHandler is being used with integrated with the generic 
+        exception handleException function here as the user should not get exposed 
+        to the code details and in worst fallback case of error the ex.msg will be shown .
+
+B. LOGGING :
+    
+    1. getLogger(Class<?> clazz)
+        Purpose: Factory method to create a LoggerUtil instance for a specific class, ensuring logs are associated with the correct class context.
+        code : " 
+        private final LoggerUtil logger = LoggerUtil.getLogger(UserService.class);
+        "
+    2. log(LogLevel level, String message, Map<String, String> context)
+        Purpose: Logs a message at the specified level with optional context (no exception).
+        Scenarios:
+                ERROR: Log unexpected issues that may impact functionality, and need urgent resolve.
+                    Example: A service failure or api failure.
+                WARN: Log unusual behavior that doesn’t stop the application but needs attention.
+                    Example: A service is working but misbehaves few times like lagging response etc...
+                INFO: Log normal application events.
+                    Example: regular integartion workflow description if needed mainly for checking status of services.
+                DEBUG: Log detailed information for debugging during development.
+                    Example: Log the payloads and parameters for checking in integrations.
+        code : "
+            logger.log(LoggerUtil.LogLevel.ERROR, "Failed to create order", 
+                       Map.of("orderId", order.getId()));
+        "

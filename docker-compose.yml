@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Spring Boot Application Service
+  demo-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-spring-app
+    ports:
+      - "2031:8080"
+    environment:
+      # Use the service name of the PostgreSQL container as the host
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres_db:5432/VoterTest4
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Nikit@12345
+      # You can also pass other Spring Boot properties here if you want to override application.properties
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      - postgres_db # Ensures postgres_db starts before demo-app
+
+  # PostgreSQL Database Service
+  postgres_db: # This is the service name your Spring Boot app will use
+    image: postgres:13-alpine # Recommended to specify a version and alpine for smaller size
+    restart: always
+    ports:
+      - "5432:5432" # Optional: Map PostgreSQL port to host if you need to access it from pgAdmin on your host machine
+    environment:
+      POSTGRES_DB: VoterTest4      # The database name
+      POSTGRES_USER: postgres      # The username
+      POSTGRES_PASSWORD: Nikit@12345 # The password
+    volumes:
+      # Persist PostgreSQL data to a named volume on the host
+      - postgres_data:/var/lib/postgresql/data
+      # Mount your SQL dump file into the container's initdb.d directory
+      - ./initdb:/docker-entrypoint-initdb.d # Directory containing your .sql dump
+      # e.g., ./initdb/my_local_db_dump.sql
+
+volumes:
+  # Define the named volume for PostgreSQL data persistence
+  postgres_data:
